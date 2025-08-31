@@ -1,39 +1,58 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
-    <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-xl p-6">
-      <h1 class="text-3xl font-bold mb-6 text-center text-blue-600">123网盘浏览器</h1>
+  <div class="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
+    <div class="max-w-3xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+      <h1 class="text-4xl font-extrabold mb-8 text-center text-blue-600 drop-shadow-md">
+        123网盘下载
+      </h1>
 
-      <!-- 登录表单 -->
-      <div v-if="!user" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-        <input v-model="username" 
-               placeholder="用户名" 
-               class="border border-gray-300 p-2 rounded w-full sm:w-auto flex-1">
-        <input v-model="password" 
-               placeholder="密码" 
-               type="password" 
-               class="border border-gray-300 p-2 rounded w-full sm:w-auto flex-1">
-        <button @click="handleLogin" 
-                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow">
-          登录
-        </button>
+      <div v-if="!user">
+        <form @submit.prevent="handleLogin" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <input 
+            v-model="username" 
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            placeholder="用户名" 
+            class="border border-gray-300 p-3 rounded-lg w-full sm:w-auto flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+          <input 
+            v-model="password"
+            id="password"
+            name="password"
+            type="password" 
+            autocomplete="current-password"
+            placeholder="密码" 
+            class="border border-gray-300 p-3 rounded-lg w-full sm:w-auto flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+          <button 
+            type="submit" 
+            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md transition transform hover:scale-105"
+          >
+            登录
+          </button>
+        </form>
       </div>
 
-      <!-- 文件浏览器 -->
       <div v-else>
         <div class="flex items-center justify-between mb-4">
           <p class="text-gray-700">已登录：<span class="font-semibold">{{ user.username }}</span></p>
-          <button @click="logout" 
-                  class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow">
+          <button 
+            @click="logout" 
+            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition transform hover:scale-105"
+          >
             退出登录
           </button>
         </div>
 
-        <div class="border rounded-lg bg-gray-50 p-4 max-h-[70vh] overflow-y-auto">
+        <div class="border rounded-lg bg-gray-50 p-4 max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <ul>
-            <li v-for="file in files" :key="file.FileId" class="mb-1">
-              <div class="flex items-center gap-2 cursor-pointer group"
-                   @click="file.Type === 1 ? loadFolder(file) : download(file)">
-                <span v-if="file.Type === 1" class="text-blue-600 group-hover:text-blue-800">
+            <li v-for="file in files" :key="file.FileId" class="mb-2">
+              <div 
+                class="flex items-center gap-2 cursor-pointer group p-2 rounded hover:bg-blue-50 transition-colors"
+                @click="file.Type === 1 ? loadFolder(file) : download(file)"
+              >
+                <span v-if="file.Type === 1" class="text-blue-600 group-hover:text-blue-800 font-medium">
                   📁 {{ file.FileName }}
                 </span>
                 <span v-else class="group-hover:text-gray-800">
@@ -41,12 +60,13 @@
                 </span>
               </div>
 
-              <!-- 子文件夹 -->
-              <ul v-if="expanded[file.FileId]" class="ml-6 border-l pl-3 mt-1">
+              <ul v-if="expanded[file.FileId]" class="ml-4 border-l pl-4 mt-1">
                 <li v-for="sub in expanded[file.FileId]" :key="sub.FileId" class="mb-1">
-                  <div class="flex items-center gap-2 cursor-pointer group"
-                       @click="sub.Type === 1 ? loadFolder(sub) : download(sub)">
-                    <span v-if="sub.Type === 1" class="text-blue-600 group-hover:text-blue-800">
+                  <div 
+                    class="flex items-center gap-2 cursor-pointer group p-2 rounded hover:bg-blue-50 transition-colors"
+                    @click="sub.Type === 1 ? loadFolder(sub) : download(sub)"
+                  >
+                    <span v-if="sub.Type === 1" class="text-blue-600 group-hover:text-blue-800 font-medium">
                       📁 {{ sub.FileName }}
                     </span>
                     <span v-else class="group-hover:text-gray-800">
