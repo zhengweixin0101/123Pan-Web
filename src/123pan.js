@@ -1,4 +1,3 @@
-// src/pan.js
 export const headers = (token) => ({
     "user-agent": "123pan/v2.4.0(Android_7.1.2;Xiaomi)",
     "content-type": "application/json",
@@ -22,7 +21,10 @@ export async function login(username, password) {
     const data = await res.json();
     if (data.code === 200) {
         const token = 'Bearer ' + data.data.token;
-        localStorage.setItem('token', token); // 保存本地
+        localStorage.setItem('user', JSON.stringify({
+            username,
+            token
+        }));
         return token;
     } else {
         throw new Error(data.message);
@@ -34,7 +36,7 @@ export async function getFiles(token, parentId = 0) {
         headers: headers(token)
     });
     const data = await res.json();
-    return data.data.InfoList || [];
+    return data.data.InfoList;
 }
 
 export async function downloadFile(token, file) {

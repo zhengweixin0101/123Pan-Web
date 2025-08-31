@@ -1,15 +1,15 @@
 <template>
   <div class="p-6">
     <h1 class="text-2xl font-bold mb-4">123网盘浏览器</h1>
-
-    <div v-if="!token" class="mb-4">
+    
+    <div v-if="!user" class="mb-4">
       <input v-model="username" placeholder="用户名" class="border p-2 mr-2">
       <input v-model="password" placeholder="密码" type="password" class="border p-2 mr-2">
       <button @click="handleLogin" class="bg-blue-500 text-white px-4 py-2 rounded">登录</button>
     </div>
 
     <div v-else>
-      <p class="mb-4">已登录 Token: {{ token.slice(0,20) }}...</p>
+      <p class="mb-4">已登录用户：{{ user.username }}</p>
       <button @click="logout" class="bg-red-500 text-white px-4 py-2 rounded mb-4">退出登录</button>
       <div>
         <ul>
@@ -43,13 +43,14 @@ import { login, getFiles, downloadFile } from './123pan.js';
 
 const username = ref('');
 const password = ref('');
-const token = ref(localStorage.getItem('token') || '');
+const user = ref(JSON.parse(localStorage.getItem('user') || 'null'));
 const files = ref([]);
 const expanded = ref({});
 
 async function handleLogin() {
   try {
-    token.value = await login(username.value, password.value);
+    const token = await login(username.value, password.value);
+    user.value = JSON.parse(localStorage.getItem('user'));
     await loadRoot();
   } catch (err) {
     alert('登录失败: ' + err.message);
@@ -57,31 +58,31 @@ async function handleLogin() {
 }
 
 async function loadRoot() {
-  if (!token.value) return;
-  files.value = await getFiles(token.value, 0);
+  if (!user.value) return;
+  files.value = await getFiles(user.value.token, 0);
 }
 
 async function loadFolder(file) {
   if (expanded.value[file.FileId]) {
     delete expanded.value[file.FileId];
   } else {
-    expanded.value[file.FileId] = await getFiles(token.value, file.FileId);
+    expanded.value[file.FileId] = await getFiles(user.value.token, file.FileId);
   }
 }
 
 function download(file) {
-  downloadFile(token.value, file);
+  downloadFile(user.value.token, file);
 }
 
 function logout() {
-  localStorage.removeItem('token');
-  token.value = '';
+  localStorage.removeItem('user');
+  user.value = null;
   files.value = [];
   expanded.value = {};
 }
 
 onMounted(async () => {
-  if (token.value) {
+  if (user.value) {
     await loadRoot();
   }
 });
