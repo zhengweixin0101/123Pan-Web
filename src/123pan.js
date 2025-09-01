@@ -2,7 +2,7 @@ export const headers = (token) => ({
     "user-agent": "123pan/v2.4.0(Android_7.1.2;Xiaomi)",
     "content-type": "application/json",
     "osversion": "Android_7.1.2",
-    "loginuuid": crypto.randomUUID().replace(/-/g, ""),
+    "loginuuid": crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : Math.random().toString(36).substring(2, 18),
     "platform": "android",
     "devicetype": "M2101K9C",
     "x-channel": "1004",
@@ -54,18 +54,11 @@ export async function downloadFile(token, file) {
         })
     });
     const data = await res.json();
-    if (data.code !== 0 || !data.data.DownloadUrl) {
-        throw new Error('获取下载链接失败: ' + data.message);
-    }
-    const a = document.createElement('a');
-    a.href = data.data.DownloadUrl;
-    a.download = file.FileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    if (data.code !== 0 || !data.data.DownloadUrl) throw new Error('获取下载链接失败: ' + data.message);
+    return data.data.DownloadUrl;
 }
 
-// 删除文件（移入回收站）
+// 删除文件
 export async function deleteFile(token, file, moveToTrash = true) {
     const res = await fetch('https://www.123pan.com/a/api/file/trash', {
         method: 'POST',
@@ -77,9 +70,43 @@ export async function deleteFile(token, file, moveToTrash = true) {
         })
     });
     const data = await res.json();
-    if (data.code === 0) {
-        return true;
-    } else {
-        throw new Error(data.message);
+    if (data.code !== 0) throw new Error(data.message);
+    return true;
+}
+
+// 分享解析
+export async function parseShareFolder(token, shareKey, pwd = '', parentId = 0) {
+    const res = await fetch(`https://www.123pan.com/b/api/share/get?limit=100&next=1&orderBy=share_id&orderDirection=desc&shareKey=${shareKey}&SharePwd=${pwd}&ParentFileId=${parentId}&Page=1`, {
+        headers: headers(token)
+    });
+    const data = await res.json();
+    if (data.code !== 0) throw new Error(data.message);
+
+    let result = [];
+    for (const item of data.data.InfoList) {
+        if (item.Type === 1) {
+            const childFiles = await parseShareFolder(token, shareKey, pwd, item.FileId);
+            result = result.concat(childFiles);
+        } else {
+            const downloadRes = await fetch('https://www.123pan.com/a/api/share/download/info', {
+                method: 'POST',
+                headers: headers(token),
+                body: JSON.stringify({
+                    Etag: item.Etag,
+                    FileID: item.FileId,
+                    S3keyFlag: item.S3KeyFlag,
+                    ShareKey: shareKey,
+                    Size: item.Size
+                })
+            });
+            const downloadData = await downloadRes.json();
+            if (downloadData.code === 0 && downloadData.data.DownloadURL) {
+                item.DownloadUrl = downloadData.data.DownloadURL;
+            } else {
+                item.DownloadUrl = '#';
+            }
+            result.push(item);
+        }
     }
+    return result;
 }
