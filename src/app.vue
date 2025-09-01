@@ -5,6 +5,7 @@
         123网盘下载
       </h1>
 
+      <!-- 登录 -->
       <div v-if="!user">
         <form @submit.prevent="handleLogin" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <input 
@@ -34,6 +35,7 @@
         </form>
       </div>
 
+      <!-- 列表 -->
       <div v-else>
         <div class="flex items-center justify-between mb-4">
           <p class="text-gray-700">已登录：<span class="font-semibold">{{ user.username }}</span></p>
@@ -48,30 +50,31 @@
         <div class="border rounded-lg bg-gray-50 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner">
           <ul>
             <li v-for="file in files" :key="file.FileId" class="mb-2 -ml-10 list-none">
-              <div 
-                class="flex items-center gap-2 cursor-pointer group p-2 rounded hover:bg-blue-50 transition-colors"
-                @click="file.Type === 1 ? loadFolder(file) : download(file)"
-              >
-                <span v-if="file.Type === 1" class="group-hover:text-blue-500 font-medium transition-colors">
-                  📁 {{ file.FileName }}
-                </span>
-                <span v-else class="group-hover:text-gray-800">
-                  📄 {{ file.FileName }}
-                </span>
+              <div class="flex items-center justify-between gap-2 p-2 rounded hover:bg-blue-50 transition-colors">
+                <div class="flex items-center gap-2 cursor-pointer" @click="file.Type === 1 ? loadFolder(file) : download(file)">
+                  <span v-if="file.Type === 1" class="group-hover:text-blue-500 font-medium transition-colors">
+                    📁 {{ file.FileName }}
+                  </span>
+                  <span v-else class="group-hover:text-gray-800">
+                    📄 {{ file.FileName }}
+                  </span>
+                </div>
+                <button @click.stop="deleteSingleFile(file)" class="text-red-500 hover:text-red-700">删除</button>
               </div>
 
+              <!-- 子文件夹 -->
               <ul v-if="expanded[file.FileId]" class="ml-4 border-l pl-4 mt-1">
                 <li v-for="sub in expanded[file.FileId]" :key="sub.FileId" class="mb-1 list-none">
-                  <div 
-                    class="flex items-center gap-2 cursor-pointer group p-2 rounded hover:bg-blue-50 transition-colors"
-                    @click="sub.Type === 1 ? loadFolder(sub) : download(sub)"
-                  >
-                    <span v-if="sub.Type === 1" class="text-blue-600 group-hover:text-blue-800 font-medium transition-colors">
-                      📁 {{ sub.FileName }}
-                    </span>
-                    <span v-else class="group-hover:text-gray-800">
-                      📄 {{ sub.FileName }}
-                    </span>
+                  <div class="flex items-center justify-between gap-2 p-2 rounded hover:bg-blue-50 transition-colors">
+                    <div class="flex items-center gap-2 cursor-pointer" @click="sub.Type === 1 ? loadFolder(sub) : download(sub)">
+                      <span v-if="sub.Type === 1" class="text-blue-600 group-hover:text-blue-800 font-medium transition-colors">
+                        📁 {{ sub.FileName }}
+                      </span>
+                      <span v-else class="group-hover:text-gray-800">
+                        📄 {{ sub.FileName }}
+                      </span>
+                    </div>
+                    <button @click.stop="deleteSingleFile(sub)" class="text-red-500 hover:text-red-700">删除</button>
                   </div>
                 </li>
               </ul>
@@ -85,7 +88,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { login, getFiles, downloadFile } from './123pan.js';
+import { login, getFiles, downloadFile, deleteFile } from './123pan.js';
 import 'uno.css'
 
 const username = ref('');
@@ -94,6 +97,7 @@ const user = ref(JSON.parse(localStorage.getItem('user') || 'null'));
 const files = ref([]);
 const expanded = ref({});
 
+// 登录
 async function handleLogin() {
   try {
     await login(username.value, password.value);
@@ -104,11 +108,13 @@ async function handleLogin() {
   }
 }
 
+// 根目录文件
 async function loadRoot() {
   if (!user.value) return;
   files.value = await getFiles(user.value.token, 0);
 }
 
+// 加载子文件夹
 async function loadFolder(file) {
   if (expanded.value[file.FileId]) {
     delete expanded.value[file.FileId];
@@ -117,10 +123,23 @@ async function loadFolder(file) {
   }
 }
 
+// 下载
 function download(file) {
   downloadFile(user.value.token, file);
 }
 
+// 删除
+async function deleteSingleFile(file) {
+  if (!confirm(`确认删除 "${file.FileName}" 吗？`)) return;
+  try {
+    await deleteFile(user.value.token, file);
+    await loadRoot(); // 刷新列表
+  } catch (err) {
+    alert('删除失败: ' + err.message);
+  }
+}
+
+// 登出
 function logout() {
   localStorage.removeItem('user');
   user.value = null;
@@ -128,6 +147,7 @@ function logout() {
   expanded.value = {};
 }
 
+// 初始化
 onMounted(async () => {
   if (user.value) {
     await loadRoot();

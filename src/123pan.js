@@ -12,6 +12,7 @@ export const headers = (token) => ({
     ...(token ? { authorization: token } : {})
 });
 
+// 登录
 export async function login(username, password) {
     const res = await fetch('https://www.123pan.com/b/api/user/sign_in', {
         method: 'POST',
@@ -21,24 +22,23 @@ export async function login(username, password) {
     const data = await res.json();
     if (data.code === 200) {
         const token = 'Bearer ' + data.data.token;
-        localStorage.setItem('user', JSON.stringify({
-            username,
-            token
-        }));
+        localStorage.setItem('user', JSON.stringify({ username, token }));
         return token;
     } else {
         throw new Error(data.message);
     }
 }
 
+// 获取文件列表
 export async function getFiles(token, parentId = 0) {
     const res = await fetch(`https://www.123pan.com/b/api/file/list/new?driveId=0&limit=100&next=0&orderBy=file_id&orderDirection=desc&parentFileId=${parentId}&trashed=false&SearchData=&Page=1&OnlyLookAbnormalFile=0`, {
         headers: headers(token)
     });
     const data = await res.json();
-    return data.data.InfoList;
+    return data.data.InfoList || [];
 }
 
+// 下载文件
 export async function downloadFile(token, file) {
     const res = await fetch('https://www.123pan.com/a/api/file/download_info', {
         method: 'POST',
@@ -63,4 +63,23 @@ export async function downloadFile(token, file) {
     document.body.appendChild(a);
     a.click();
     a.remove();
+}
+
+// 删除文件（移入回收站）
+export async function deleteFile(token, file, moveToTrash = true) {
+    const res = await fetch('https://www.123pan.com/a/api/file/trash', {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+            driveId: 0,
+            fileTrashInfoList: [file],
+            operation: moveToTrash
+        })
+    });
+    const data = await res.json();
+    if (data.code === 0) {
+        return true;
+    } else {
+        throw new Error(data.message);
+    }
 }
