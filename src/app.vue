@@ -182,9 +182,29 @@ function logout() {
 // 解析分享链接
 async function parseShare() {
   if (!shareUrl.value) return alert('请输入分享链接');
+
   try {
-    const shareKey = shareUrl.value.split('/').pop().replace('.html', '');
-    shareFiles.value = await parseShareFolder(user.value.token, shareKey, sharePwd.value);
+    const urlStr = shareUrl.value.trim();
+    let shareKey = '';
+    let pwd = sharePwd.value.trim();
+
+    const sIndex = urlStr.indexOf('/s/');
+    if (sIndex === -1) return alert('分享链接格式异常');
+
+    let endIndex = urlStr.indexOf('?', sIndex);
+    if (endIndex === -1) endIndex = urlStr.indexOf('#', sIndex);
+    if (endIndex === -1) endIndex = urlStr.length;
+
+    shareKey = urlStr.substring(sIndex + 3, endIndex);
+
+    if (!pwd) {
+      const pwdIndex = urlStr.indexOf('?pwd=');
+      if (pwdIndex !== -1) {
+        pwd = urlStr.substring(pwdIndex + 5, pwdIndex + 9); 
+      }
+    }
+
+    shareFiles.value = await parseShareFolder(user.value.token, shareKey, pwd);
   } catch (err) {
     alert('解析失败: ' + err.message);
   }
