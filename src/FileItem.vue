@@ -3,13 +3,15 @@
     <div 
       class="flex items-center justify-between gap-2 p-2 rounded hover:bg-blue-50 transition-colors"
       :style="{ paddingLeft: level * 20 + 'px' }"
+      @click="toggle"
     >
-      <!-- 文件/文件夹名 -->
-      <div class="flex items-center gap-2 cursor-pointer" @click="handleClick">
-        <span v-if="file.Type === 1" class="font-medium">📁 {{ file.FileName }}</span>
-        <span v-else class="text-gray-800">📄 {{ file.FileName }}</span>
+      <div class="flex items-center gap-1">
+        <span v-if="file.Type === 1">
+          {{ isExpanded ? '📂' : '📁' }}
+        </span>
+        <span v-else>📄</span>
+        <span>{{ file.FileName }}</span>
       </div>
-
       <div class="flex items-center gap-2">
         <!-- 删除按钮 -->
         <div v-if="deletable" @click.stop="deleteFile(file)" class="text-red-500 hover:text-red-900 cursor-pointer">
@@ -20,10 +22,16 @@
       </div>
     </div>
 
-    <!-- 子文件夹递归 -->
-    <ul v-if="isExpanded && file.children?.length">
+    <ul v-if="isExpanded">
+      <li
+        v-if="!file.children || !file.children.length"
+        class="text-gray-400 list-none"
+      >
+        🚫 暂无文件
+      </li>
+
       <FileItem
-        v-for="sub in file.children"
+        v-for="sub in file.children || []"
         :key="sub.FileId"
         :file="sub"
         :level="level + 1"
@@ -37,27 +45,22 @@
 
 <script setup>
 import { ref } from 'vue';
+
 const props = defineProps({
   file: Object,
-  level: { type: Number, default: 0 },
-  deletable: { type: Boolean, default: false },
+  level: Number,
+  deletable: Boolean,
 });
+
 const emit = defineEmits(['download', 'delete-file']);
+
 const isExpanded = ref(false);
 
-function handleClick() {
-  if (props.file.Type === 1 && props.file.children?.length) {
-    toggleExpand();
-  } else if (props.file.Type === 0) {
+function toggle() {
+  if (props.file.Type === 1) {
+    isExpanded.value = !isExpanded.value;
+  } else {
     emit('download', props.file);
   }
-}
-
-function toggleExpand() {
-  isExpanded.value = !isExpanded.value;
-}
-
-function deleteFile(file) {
-  emit('delete-file', file);
 }
 </script>
