@@ -28,6 +28,31 @@ export const headers = (token) => ({
 })
 
 // 登录
+function maskUsername(username) {
+    if (!username) return ''
+
+    // 手机号
+    if (/^\d{11}$/.test(username)) {
+        return username.slice(0, 3) + '****' + username.slice(-4)
+    }
+
+    // 邮箱
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+        const [name, domain] = username.split('@')
+        if (name.length <= 2) {
+            return name[0] + '*' + '@' + domain
+        }
+        return name[0] + '****' + name.slice(-1) + '@' + domain
+    }
+
+    // 普通用户名
+    if (username.length <= 2) return username
+    if (username.length <= 4) {
+        return username[0] + '**' + username.slice(-1)
+    }
+    return username.slice(0, 2) + '****' + username.slice(-2)
+}
+
 export async function login(username, password) {
     const res = await fetch('https://www.123pan.com/b/api/user/sign_in', {
         method: 'POST',
@@ -37,7 +62,8 @@ export async function login(username, password) {
     const data = await res.json()
     if (data.code === 200) {
         const token = 'Bearer ' + data.data.token
-        setCookie('user', JSON.stringify({ username, token }), 3)
+        const maskedUsername = maskUsername(username)
+        setCookie('user', JSON.stringify({ username: maskedUsername, token }), 3)
         return token
     } else {
         throw new Error(data.message)

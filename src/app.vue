@@ -85,7 +85,7 @@
         </button>
       </form>
 
-      <div class="border rounded-lg bg-gray-50 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner mb-6">
+      <div class="border rounded-lg bg-gray-50 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner">
         <ul v-if="shareFiles.length">
           <FileItem
             v-for="f in shareFiles"
@@ -96,7 +96,7 @@
             @download="download"
           />
         </ul>
-        <p v-else class="text-gray-400">暂无分享文件</p>
+        <p v-else class="text-gray-400">暂无文件</p>
       </div>
     </div>
   </div>

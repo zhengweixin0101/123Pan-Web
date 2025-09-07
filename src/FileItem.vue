@@ -1,10 +1,11 @@
 <template>
-  <li class="mb-1 -ml-10 list-none">
+  <li class="mb-1 -ml-10 list-none select-none">
     <div 
-      class="flex items-center justify-between gap-2 p-2 rounded hover:bg-blue-50 transition-colors"
+      class="flex items-center justify-between gap-2 p-2 rounded hover:bg-blue-50 transition-colors cursor-pointer"
       :style="{ paddingLeft: level * 20 + 'px' }"
+      @click="toggle"
     >
-      <div class="flex items-center gap-1 cursor-pointer" @click="toggle">
+      <div class="flex items-center gap-1">
         <span v-if="file.Type === 1">{{ isExpanded ? '📂' : '📁' }}</span>
         <span v-else>📄</span>
         <span>{{ file.FileName }}</span>
