@@ -5,6 +5,7 @@
         123网盘下载
       </h1>
 
+      <!-- 未登录 -->
       <div v-if="!user">
         <form @submit.prevent="handleLogin" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <input 
@@ -34,6 +35,7 @@
         </form>
       </div>
 
+      <!-- 已登录 -->
       <div v-else>
         <div class="flex items-center justify-between mb-4">
           <p class="text-gray-700">已登录：<span class="font-semibold">{{ user.username }}</span></p>
@@ -47,7 +49,12 @@
 
         <!-- 文件列表 -->
         <div class="border rounded-lg bg-gray-50 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner mb-6">
-          <ul>
+          <div v-if="isLoading" class="py-6 space-y-2">
+            <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <ul v-else>
             <FileItem
               v-for="file in files"
               :key="file.FileId"
@@ -86,7 +93,12 @@
       </form>
 
       <div class="border rounded-lg bg-gray-50 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner">
-        <ul v-if="shareFiles.length">
+        <div v-if="isParsing" class="py-6 space-y-2">
+          <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+          <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+          <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        <ul v-else-if="shareFiles.length">
           <FileItem
             v-for="f in shareFiles"
             :key="f.FileId"
@@ -117,22 +129,34 @@ const user = ref(JSON.parse(Cookies.get('user') || 'null'));
 const files = ref([]);
 const shareFiles = ref([]);
 
+const isLoading = ref(false);           // 根目录加载
+const isParsing = ref(false);           // 分享解析
+
 // 登录
 async function handleLogin() {
+  isLoading.value = true;
   try {
     await login(username.value, password.value);
-
     user.value = JSON.parse(Cookies.get('user'));
     await loadRoot();
   } catch (err) {
     alert('登录失败: ' + err.message);
+  } finally {
+    isLoading.value = false;
   }
 }
 
 // 根目录文件
 async function loadRoot() {
   if (!user.value) return;
-  files.value = await getFiles(user.value.token, 0);
+  isLoading.value = true;
+  try {
+    files.value = await getFiles(user.value.token, 0);
+  } catch (err) {
+    alert('加载文件失败: ' + err.message);
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 // 下载
@@ -157,14 +181,9 @@ async function download(file) {
 // 删除
 async function deleteSingleFile(file) {
   if (!confirm(`确认删除 "${file.FileName}" 吗？`)) return;
-
   try {
     await deleteFile(user.value.token, file);
-
     files.value = await getFiles(user.value.token, 0);
-
-    files.value = await getFiles(user.value.token, 0);
-
   } catch (err) {
     alert('删除失败: ' + err.message);
   }
@@ -175,19 +194,17 @@ function logout() {
   Cookies.remove('user');
   user.value = null;
   files.value = [];
-  expanded.value = {};
   shareFiles.value = [];
 }
 
 // 解析分享链接
 async function parseShare() {
   if (!shareUrl.value) return alert('请输入分享链接');
-
+  isParsing.value = true;
   try {
     const urlStr = shareUrl.value.trim();
     let shareKey = '';
     let pwd = sharePwd.value.trim();
-
     const sIndex = urlStr.indexOf('/s/');
     if (sIndex === -1) return alert('分享链接格式异常');
 
@@ -200,13 +217,15 @@ async function parseShare() {
     if (!pwd) {
       const pwdIndex = urlStr.indexOf('?pwd=');
       if (pwdIndex !== -1) {
-        pwd = urlStr.substring(pwdIndex + 5, pwdIndex + 9); 
+        pwd = urlStr.substring(pwdIndex + 5, pwdIndex + 9);
       }
     }
 
     shareFiles.value = await parseShareFolder(user.value.token, shareKey, pwd);
   } catch (err) {
     alert('解析失败: ' + err.message);
+  } finally {
+    isParsing.value = false;
   }
 }
 
