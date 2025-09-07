@@ -108,13 +108,14 @@
 import { ref, onMounted } from 'vue';
 import FileItem from './FileItem.vue';
 import { login, getFiles, downloadFile, deleteFile, parseShareFolder } from './123pan.js';
+import Cookies from 'js-cookie';
 import 'uno.css'
 
 const username = ref('');
 const password = ref('');
 const shareUrl = ref('');
 const sharePwd = ref('');
-const user = ref(JSON.parse(localStorage.getItem('user') || 'null'));
+const user = ref(JSON.parse(Cookies.get('user') || 'null'));
 const files = ref([]);
 const expanded = ref({});
 const shareFiles = ref([]);
@@ -123,7 +124,8 @@ const shareFiles = ref([]);
 async function handleLogin() {
   try {
     await login(username.value, password.value);
-    user.value = JSON.parse(localStorage.getItem('user'));
+
+    user.value = JSON.parse(Cookies.get('user'));
     await loadRoot();
   } catch (err) {
     alert('登录失败: ' + err.message);
@@ -192,7 +194,7 @@ async function deleteSingleFile(file) {
 
 // 登出
 function logout() {
-  localStorage.removeItem('user');
+  Cookies.remove('user');
   user.value = null;
   files.value = [];
   expanded.value = {};

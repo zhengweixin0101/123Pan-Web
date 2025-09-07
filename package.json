@@ -8,6 +8,7 @@
         "serve": "vite preview"
     },
     "dependencies": {
+        "js-cookie": "^3.0.5",
         "unocss": "^66.5.0",
         "vue": "^3.3.4"
     },

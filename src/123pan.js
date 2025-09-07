@@ -1,3 +1,18 @@
+function setCookie(name, value, days) {
+    const date = new Date()
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000)
+    document.cookie = `${name}=${encodeURIComponent(value)};expires=${date.toUTCString()};path=/`
+}
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+    return match ? decodeURIComponent(match[2]) : null
+}
+
+function deleteCookie(name) {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+}
+
 export const headers = (token) => ({
     "user-agent": "123pan/v2.4.0(Android_7.1.2;Xiaomi)",
     "content-type": "application/json",
@@ -10,7 +25,7 @@ export const headers = (token) => ({
     "app-version": "61",
     "x-app-version": "2.4.0",
     ...(token ? { authorization: token } : {})
-});
+})
 
 // 登录
 export async function login(username, password) {
@@ -18,15 +33,26 @@ export async function login(username, password) {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify({ type: 1, passport: username, password })
-    });
-    const data = await res.json();
+    })
+    const data = await res.json()
     if (data.code === 200) {
-        const token = 'Bearer ' + data.data.token;
-        localStorage.setItem('user', JSON.stringify({ username, token }));
-        return token;
+        const token = 'Bearer ' + data.data.token
+        setCookie('user', JSON.stringify({ username, token }), 3)
+        return token
     } else {
-        throw new Error(data.message);
+        throw new Error(data.message)
     }
+}
+
+// cookie
+export function getUser() {
+    const cookieUser = getCookie('user')
+    return cookieUser ? JSON.parse(cookieUser) : null
+}
+
+// 登出
+export function logoutUser() {
+    deleteCookie('user')
 }
 
 // 获取文件列表
