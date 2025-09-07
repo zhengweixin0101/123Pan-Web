@@ -52,9 +52,8 @@
               v-for="file in files"
               :key="file.FileId"
               :file="file"
-              :sub-expanded="expanded"
               :level="0"
-              @load-folder="loadFolder"
+              :deletable="true"
               @download="download"
               @delete-file="deleteSingleFile"
             />
@@ -86,17 +85,19 @@
         </button>
       </form>
 
-      <ul v-if="shareFiles.length">
-        <FileItem
-          v-for="f in shareFiles"
-          :key="f.FileId"
-          :file="f"
-          :sub-expanded="{}"
-          :level="0"
-          @download="download"
-        />
-      </ul>
-      <p v-else class="text-gray-400">暂无分享文件</p>
+      <div class="border rounded-lg bg-gray-50 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner mb-6">
+        <ul v-if="shareFiles.length">
+          <FileItem
+            v-for="f in shareFiles"
+            :key="f.FileId"
+            :file="f"
+            :level="0"
+            :deletable="false"
+            @download="download"
+          />
+        </ul>
+        <p v-else class="text-gray-400">暂无分享文件</p>
+      </div>
     </div>
   </div>
 </template>
@@ -114,7 +115,6 @@ const shareUrl = ref('');
 const sharePwd = ref('');
 const user = ref(JSON.parse(Cookies.get('user') || 'null'));
 const files = ref([]);
-const expanded = ref({});
 const shareFiles = ref([]);
 
 // 登录
@@ -133,15 +133,6 @@ async function handleLogin() {
 async function loadRoot() {
   if (!user.value) return;
   files.value = await getFiles(user.value.token, 0);
-}
-
-// 加载子文件夹
-async function loadFolder(file) {
-  if (expanded.value[file.FileId]) {
-    delete expanded.value[file.FileId];
-  } else {
-    expanded.value[file.FileId] = await getFiles(user.value.token, file.FileId);
-  }
 }
 
 // 下载
@@ -172,17 +163,7 @@ async function deleteSingleFile(file) {
 
     files.value = await getFiles(user.value.token, 0);
 
-    async function refreshExpanded(expObj) {
-      for (const key in expObj) {
-        expObj[key] = await getFiles(user.value.token, Number(key));
-        for (const f of expObj[key]) {
-          if (f.Type === 1 && expObj[f.FileId]) {
-            await refreshExpanded({ [f.FileId]: expObj[f.FileId] });
-          }
-        }
-      }
-    }
-    await refreshExpanded(expanded.value);
+    files.value = await getFiles(user.value.token, 0);
 
   } catch (err) {
     alert('删除失败: ' + err.message);
