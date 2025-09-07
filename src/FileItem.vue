@@ -19,9 +19,9 @@
     </div>
 
     <!-- 子文件夹递归 -->
-    <ul v-if="subExpanded[file.FileId] && subExpanded[file.FileId].length">
+    <ul v-if="isExpanded && (file.children?.length || subExpanded[file.FileId]?.length)">
       <FileItem
-        v-for="sub in subExpanded[file.FileId]"
+        v-for="sub in file.children?.length ? file.children : subExpanded[file.FileId]"
         :key="sub.FileId"
         :file="sub"
         :sub-expanded="subExpanded"
@@ -35,7 +35,8 @@
 </template>
 
 <script setup>
-import { defineEmits } from 'vue';
+import { ref } from 'vue';
+import { defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
   file: Object,
@@ -45,12 +46,21 @@ const props = defineProps({
 
 const emit = defineEmits(['load-folder', 'download', 'delete-file']);
 
+const isExpanded = ref(false);
+
 function handleClick() {
   if (props.file.Type === 1) {
-    emit('load-folder', props.file);
+    toggleExpand();
   } else {
     emit('download', props.file);
   }
+}
+
+function toggleExpand() {
+  if (!isExpanded.value && !props.file.children?.length) {
+    emit('load-folder', props.file);
+  }
+  isExpanded.value = !isExpanded.value;
 }
 
 function deleteFile(file) {

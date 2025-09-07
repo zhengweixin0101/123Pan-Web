@@ -86,18 +86,15 @@
         </button>
       </form>
 
-      <ul v-if="shareFiles.length" class="space-y-2">
-        <li v-for="f in shareFiles" :key="f.FileId">
-          <div class="flex items-center justify-between p-2 rounded-lg hover:bg-green-50 transition-colors">
-            <a 
-              :href="f.DownloadUrl" 
-              target="_blank" 
-              class="text-gray-800 hover:text-green-700 font-medium truncate"
-            >
-              📄 {{ f.FileName }}
-            </a>
-          </div>
-        </li>
+      <ul v-if="shareFiles.length">
+        <FileItem
+          v-for="f in shareFiles"
+          :key="f.FileId"
+          :file="f"
+          :sub-expanded="{}"
+          :level="0"
+          @download="download"
+        />
       </ul>
       <p v-else class="text-gray-400">暂无分享文件</p>
     </div>

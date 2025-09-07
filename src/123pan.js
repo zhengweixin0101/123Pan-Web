@@ -102,17 +102,21 @@ export async function deleteFile(token, file, moveToTrash = true) {
 
 // 分享解析
 export async function parseShareFolder(token, shareKey, pwd = '', parentId = 0) {
-    const res = await fetch(`https://www.123pan.com/b/api/share/get?limit=100&next=1&orderBy=share_id&orderDirection=desc&shareKey=${shareKey}&SharePwd=${pwd}&ParentFileId=${parentId}&Page=1`, {
-        headers: headers(token)
-    });
+    const res = await fetch(
+        `https://www.123pan.com/b/api/share/get?limit=100&next=1&orderBy=share_id&orderDirection=desc&shareKey=${shareKey}&SharePwd=${pwd}&ParentFileId=${parentId}&Page=1`,
+        { headers: headers(token) }
+    );
     const data = await res.json();
     if (data.code !== 0) throw new Error(data.message);
 
-    let result = [];
+    const result = [];
     for (const item of data.data.InfoList) {
         if (item.Type === 1) {
-            const childFiles = await parseShareFolder(token, shareKey, pwd, item.FileId);
-            result = result.concat(childFiles);
+            const children = await parseShareFolder(token, shareKey, pwd, item.FileId);
+            result.push({
+                ...item,
+                children,
+            });
         } else {
             const downloadRes = await fetch('https://www.123pan.com/a/api/share/download/info', {
                 method: 'POST',
@@ -122,16 +126,17 @@ export async function parseShareFolder(token, shareKey, pwd = '', parentId = 0) 
                     FileID: item.FileId,
                     S3keyFlag: item.S3KeyFlag,
                     ShareKey: shareKey,
-                    Size: item.Size
-                })
+                    Size: item.Size,
+                }),
             });
             const downloadData = await downloadRes.json();
-            if (downloadData.code === 0 && downloadData.data.DownloadURL) {
-                item.DownloadUrl = downloadData.data.DownloadURL;
-            } else {
-                item.DownloadUrl = '#';
-            }
-            result.push(item);
+            result.push({
+                ...item,
+                DownloadUrl:
+                    downloadData.code === 0 && downloadData.data.DownloadURL
+                        ? downloadData.data.DownloadURL
+                        : '#',
+            });
         }
     }
     return result;
