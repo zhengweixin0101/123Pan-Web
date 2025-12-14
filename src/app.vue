@@ -105,6 +105,8 @@
             :file="f"
             :level="0"
             :deletable="false"
+            :share-key="shareKeyRef"
+            :share-pwd="sharePwd"
             @download="download"
           />
         </ul>
@@ -128,6 +130,7 @@ const sharePwd = ref('');
 const user = ref(JSON.parse(Cookies.get('user') || 'null'));
 const files = ref([]);
 const shareFiles = ref([]);
+const shareKeyRef = ref('');
 
 const isLoading = ref(false);           // 根目录加载
 const isParsing = ref(false);           // 分享解析
@@ -138,6 +141,8 @@ async function handleLogin() {
   try {
     await login(username.value, password.value);
     user.value = JSON.parse(Cookies.get('user'));
+    // 暴露给子组件作为回退 token 获取方式
+    window.__USER__ = user.value;
     await loadRoot();
   } catch (err) {
     alert('登录失败: ' + err.message);
@@ -151,7 +156,9 @@ async function loadRoot() {
   if (!user.value) return;
   isLoading.value = true;
   try {
-    files.value = await getFiles(user.value.token, 0);
+    const list = await getFiles(user.value.token, 0);
+    // 把 token 附加到每个文件对象，供子组件懒加载时使用
+    files.value = list.map(f => ({ ...f, _token: user.value.token }));
   } catch (err) {
     alert('加载文件失败: ' + err.message);
   } finally {
@@ -183,7 +190,8 @@ async function deleteSingleFile(file) {
   if (!confirm(`确认删除 "${file.FileName}" 吗？`)) return;
   try {
     await deleteFile(user.value.token, file);
-    files.value = await getFiles(user.value.token, 0);
+    const list = await getFiles(user.value.token, 0);
+    files.value = list.map(f => ({ ...f, _token: user.value.token }));
   } catch (err) {
     alert('删除失败: ' + err.message);
   }
@@ -195,6 +203,7 @@ function logout() {
   user.value = null;
   files.value = [];
   shareFiles.value = [];
+  window.__USER__ = null;
 }
 
 // 解析分享链接
@@ -221,6 +230,9 @@ async function parseShare() {
       }
     }
 
+    shareKeyRef.value = shareKey;
+    // 把解析出来的提取码写回 sharePwd，确保子组件懒加载时使用相同提取码
+    sharePwd.value = pwd;
     shareFiles.value = await parseShareFolder(user.value.token, shareKey, pwd);
   } catch (err) {
     alert('解析失败: ' + err.message);
@@ -232,6 +244,7 @@ async function parseShare() {
 // 初始化
 onMounted(async () => {
   if (user.value) {
+    window.__USER__ = user.value;
     await loadRoot();
   }
 });

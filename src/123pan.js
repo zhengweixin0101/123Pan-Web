@@ -83,6 +83,7 @@ export function logoutUser() {
 
 // 获取文件列表
 export async function getFiles(token, parentId = 0) {
+    // 仅获取当前目录下的文件
     const res = await fetch(
         `https://www.123pan.com/b/api/file/list/new?driveId=0&limit=100&next=0&orderBy=file_id&orderDirection=desc&parentFileId=${parentId}&trashed=false&SearchData=&Page=1&OnlyLookAbnormalFile=0`,
         { headers: headers(token) }
@@ -90,16 +91,12 @@ export async function getFiles(token, parentId = 0) {
     const data = await res.json();
     if (!data.data?.InfoList) return [];
 
-    const result = [];
-    for (const item of data.data.InfoList) {
-        if (item.Type === 1) {
-            const children = await getFiles(token, item.FileId);
-            result.push({ ...item, children });
-        } else {
-            result.push(item);
-        }
-    }
-    return result;
+    return data.data.InfoList.map(item => ({ ...item }));
+}
+
+// 按目录获取子项
+export async function getFolderChildren(token, parentId) {
+    return await getFiles(token, parentId);
 }
 
 // 下载文件
@@ -140,6 +137,7 @@ export async function deleteFile(token, file, moveToTrash = true) {
 
 // 分享解析
 export async function parseShareFolder(token, shareKey, pwd = '', parentId = 0) {
+    // 仅获取当前分享目录下的直接子项
     const res = await fetch(
         `https://www.123pan.com/b/api/share/get?limit=100&next=1&orderBy=share_id&orderDirection=desc&shareKey=${shareKey}&SharePwd=${pwd}&ParentFileId=${parentId}&Page=1`,
         { headers: headers(token) }
@@ -147,35 +145,10 @@ export async function parseShareFolder(token, shareKey, pwd = '', parentId = 0) 
     const data = await res.json();
     if (data.code !== 0) throw new Error(data.message);
 
-    const result = [];
-    for (const item of data.data.InfoList) {
-        if (item.Type === 1) {
-            const children = await parseShareFolder(token, shareKey, pwd, item.FileId);
-            result.push({
-                ...item,
-                children,
-            });
-        } else {
-            const downloadRes = await fetch('https://www.123pan.com/a/api/share/download/info', {
-                method: 'POST',
-                headers: headers(token),
-                body: JSON.stringify({
-                    Etag: item.Etag,
-                    FileID: item.FileId,
-                    S3keyFlag: item.S3KeyFlag,
-                    ShareKey: shareKey,
-                    Size: item.Size,
-                }),
-            });
-            const downloadData = await downloadRes.json();
-            result.push({
-                ...item,
-                DownloadUrl:
-                    downloadData.code === 0 && downloadData.data.DownloadURL
-                        ? downloadData.data.DownloadURL
-                        : '#',
-            });
-        }
-    }
-    return result;
+    return data.data.InfoList.map(item => ({ ...item }));
+}
+
+// 分享目录按需获取子项
+export async function parseShareChildren(token, shareKey, pwd = '', parentId = 0) {
+    return await parseShareFolder(token, shareKey, pwd, parentId);
 }

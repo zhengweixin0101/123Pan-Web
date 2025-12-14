@@ -21,19 +21,24 @@
     </div>
 
     <ul v-if="isExpanded">
+      <li v-if="isLoading" class="text-gray-500 list-none">加载中...</li>
+
       <li
-        v-if="!file.children || !file.children.length"
+        v-else-if="!childrenRef || !childrenRef.length"
         class="text-gray-400 list-none"
       >
         🚫 暂无文件
       </li>
 
       <FileItem
-        v-for="sub in file.children || []"
+        v-else
+        v-for="sub in childrenRef || []"
         :key="sub.FileId"
         :file="sub"
         :level="level + 1"
         :deletable="deletable"
+        :share-key="shareKey"
+        :share-pwd="sharePwd"
         @download="$emit('download', $event)"
         @delete-file="$emit('delete-file', $event)"
       />
@@ -48,15 +53,49 @@ const props = defineProps({
   file: Object,
   level: Number,
   deletable: Boolean,
+  shareKey: { type: String, default: '' },
+  sharePwd: { type: String, default: '' },
 });
 
 const emit = defineEmits(['download', 'delete-file']);
 
 const isExpanded = ref(false);
+const isLoading = ref(false);
+const childrenRef = ref(props.file.children && props.file.children.length ? props.file.children : []);
+
+import { getFolderChildren, parseShareChildren } from './123pan.js';
 
 function toggle() {
-  if (props.file.Type === 1) {
-    isExpanded.value = !isExpanded.value;
+    if (props.file.Type === 1) {
+    // 展开时如果还没有 children，则懒加载当前目录的子项
+    if (!isExpanded.value && (!childrenRef.value || !childrenRef.value.length)) {
+      isLoading.value = true;
+      const load = async () => {
+        try {
+          let children = [];
+          if (props.shareKey) {
+            children = await parseShareChildren(null, props.shareKey, props.sharePwd, props.file.FileId);
+          } else {
+            // 这里尝试从 file._token 使用，如果不存在，将不加载
+            const token = props.file._token || (window.__USER__ && window.__USER__.token) || null;
+            children = token ? await getFolderChildren(token, props.file.FileId) : [];
+            if (token && children && children.length) {
+              children = children.map(c => ({ ...c, _token: token }));
+            }
+          }
+          // 写入本地 childrenRef，避免直接修改 prop
+          childrenRef.value = children;
+        } catch (err) {
+          console.error('加载子目录失败', err);
+        } finally {
+          isLoading.value = false;
+          isExpanded.value = true;
+        }
+      };
+      load();
+    } else {
+      isExpanded.value = !isExpanded.value;
+    }
   } else {
     emit('download', props.file);
   }
